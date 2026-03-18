@@ -3,3 +3,5 @@ requests
 matplotlib
 numpy
 Pillow
+scikit-learn
+seaborn
