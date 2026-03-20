@@ -60,6 +60,7 @@ df_selected = df_selected.dropna(subset=["energy_per_capita"])
 # 4. Add derived features
 # -------------------------------
 df_selected["gdp_per_capita"] = df_selected["gdp"] / df_selected["population"]
+df_selected["fossil_to_renewables_ratio"] = df_selected["fossil_energy_per_capita"] / (df_selected["renewables_energy_per_capita"] + 1e-6)  # add
 
 # -------------------------------
 # 5. Filter by year (data coverage improves from 1965)
@@ -70,9 +71,8 @@ df_selected = df_selected[df_selected["year"] >= 1965]
 # 6. Drop countries with too many missing values
 # -------------------------------
 threshold = 0.4  # 40% missing allowed
-country_missing = df_selected.groupby("country").apply(
-    lambda x: x.isna().mean().mean()
-)
+
+country_missing = df_selected.isna().groupby(df_selected["country"]).mean().mean(axis=1)
 good_countries = country_missing[country_missing <= threshold].index
 df_selected = df_selected[df_selected["country"].isin(good_countries)]
 
