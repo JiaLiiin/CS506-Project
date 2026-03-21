@@ -6,7 +6,7 @@ Goal:
 - Save plots as PNG files in the 'figures/' folder.
 
 Input:
-- Data/owid-energy-data-clean.csv (cleaned dataset)
+- Data/owid-energy-data-clean-new.csv (cleaned dataset)
 
 Output:
 - Figures saved to 'figures/' folder
@@ -16,73 +16,48 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import os
-import numpy as np 
+import numpy as np
 
-# -------------------------------
-# 1. Load cleaned dataset
-# -------------------------------
-input_file = "Data/owid-energy-data-clean.csv"
-df = pd.read_csv(input_file)
+inputFile="/Users/of/Desktop/CS506-Project/Data/owid-energy-data-clean-new.csv"
+df=pd.read_csv(inputFile)
 
-# Ensure the figures folder exists
-figures_dir = "figures"
-os.makedirs(figures_dir, exist_ok=True)
+if ('log_gdp_per_capita' in df.columns):
+    df['gdp_per_capita']=np.exp(df['log_gdp_per_capita'])
 
-# -------------------------------
-# 2. Define colors per country
-# -------------------------------
-selected_countries = ['United States', 'China', 'India', 'Germany', 'Brazil']
-country_colors = {
-    'United States': '#1f77b4',  # blue
-    'China': '#ff7f0e',         # orange
-    'India': '#2ca02c',         # green
-    'Germany': '#d62728',       # red
-    'Brazil': '#9467bd'         # purple
-}
+if ('log_population' in df.columns):
+    df['population']=np.exp(df['log_population'])
 
-# -------------------------------
-# 3. Time-series of energy_per_capita
-# -------------------------------
+if ('gdp_per_capita' in df.columns) and ('population' in df.columns):
+    df['gdp']=df['gdp_per_capita']*df['population']
+
+figuresDir="figures"
+os.makedirs(figuresDir, exist_ok=True)
+
+selectedCountries=['United States', 'China', 'India', 'Germany', 'Brazil']
+countryColors={'United States':'#1f77b4', 'China':'#ff7f0e', 'India':'#2ca02c', 'Germany':'#d62728', 'Brazil':'#9467bd'}
+
 plt.figure(figsize=(10, 6))
-for country in selected_countries:
-    country_data = df[df['country'] == country]
-    plt.plot(
-        country_data['year'], 
-        country_data['energy_per_capita'], 
-        label=country, 
-        color=country_colors[country]  # consistent color
-    )
+
+for country in selectedCountries:
+    countryData=df[df['country']==country]
+    plt.plot(countryData['year'], countryData['energy_per_capita'], label=country, color=countryColors[country])
 
 plt.xlabel("Year")
-plt.ylabel("Energy per Capita (MWh/person)")
+plt.ylabel("Energy per Capita (kWh/person)")
 plt.title("Energy per Capita Over Time")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.savefig(f"{figures_dir}/energy_per_capita_timeseries.png")
+plt.savefig(f"{figuresDir}/energy_per_capita_timeseries.png")
 plt.close()
 print("Saved energy_per_capita_timeseries.png")
 
-# -------------------------------
-# 4. Renewables vs Fossil Share over time
-# -------------------------------
 plt.figure(figsize=(10, 6))
-for country in selected_countries:
-    country_data = df[df['country'] == country]
-    plt.plot(
-        country_data['year'], 
-        country_data['renewables_share_energy'], 
-        label=f"{country} Renewables", 
-        color=country_colors[country],  # same country color
-        linestyle='--'
-    )
-    plt.plot(
-        country_data['year'], 
-        country_data['fossil_share_energy'], 
-        label=f"{country} Fossil", 
-        color=country_colors[country],  # same country color
-        linestyle='-'
-    )
+
+for country in selectedCountries:
+    countryData=df[df['country']==country]
+    plt.plot(countryData['year'], countryData['renewables_share_energy'], label=f"{country} Renewables", color=countryColors[country], linestyle='--')
+    plt.plot(countryData['year'], countryData['fossil_share_energy'], label=f"{country} Fossil", color=countryColors[country], linestyle='-')
 
 plt.xlabel("Year")
 plt.ylabel("Share of Energy")
@@ -90,100 +65,68 @@ plt.title("Renewables vs Fossil Share of Energy Over Time")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.savefig(f"{figures_dir}/renewables_vs_fossil_share.png")
+plt.savefig(f"{figuresDir}/renewables_vs_fossil_share.png")
 plt.close()
 print("Saved renewables_vs_fossil_share.png")
 
-# -------------------------------
-# 5. GDP vs Energy per Capita Scatter
-# -------------------------------
 plt.figure(figsize=(8, 6))
-for country in selected_countries:
-    country_data = df[df['country'] == country]
-    plt.scatter(
-        country_data['gdp_per_capita'], 
-        country_data['energy_per_capita'], 
-        alpha=0.6, 
-        label=country, 
-        color=country_colors[country]  # consistent color
-    )
+
+for country in selectedCountries:
+    countryData=df[df['country']==country]
+    plt.scatter(countryData['gdp_per_capita'], countryData['energy_per_capita'], alpha=0.6, label=country, color=countryColors[country])
 
 plt.xlabel("GDP per Capita (USD)")
-plt.ylabel("Energy per Capita (MWh/person)")
+plt.ylabel("Energy per Capita (kWh/person)")
 plt.title("GDP vs Energy per Capita")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.savefig(f"{figures_dir}/gdp_vs_energy_per_capita.png")
+plt.savefig(f"{figuresDir}/gdp_vs_energy_per_capita.png")
 plt.close()
 print("Saved gdp_vs_energy_per_capita.png")
 
-# Fixed axis limits to match the static chart
-x_min, x_max = 0, 100000      # GDP per Capita
-y_min, y_max = 0, 100000     # Energy per Capita
+plt.figure(figsize=(10, 6))
 
-# -------------------------------
-# 6. GDP vs Energy per Capita Animation
-# -------------------------------
-years = sorted(df['year'].unique())
-fig, ax = plt.subplots(figsize=(8, 6))
+scatter=None
 
-# Scatter objects per country
-scatters = {}
-lines = {}      # new: line for history
-histories = {}  # new: store past positions
+for country in selectedCountries:
+    countryData=df[df['country']==country]
+    
+    if ('gdp' in df.columns) and ('fossil_share_energy' in df.columns):
+        scatter=plt.scatter(countryData['gdp_per_capita'], countryData['energy_per_capita'], s=countryData['gdp']/100000000000, c=countryData['fossil_share_energy'], cmap='Reds', alpha=0.7, edgecolors='black', label=country)
 
-for country in selected_countries:
-    # Initialize first valid data point
-    first_data = df[(df['country'] == country) & (~df['gdp_per_capita'].isna()) & (~df['energy_per_capita'].isna())]
-    if not first_data.empty:
-        x0 = first_data['gdp_per_capita'].values[0]
-        y0 = first_data['energy_per_capita'].values[0]
-        scatters[country] = ax.scatter([x0], [y0], label=country, color=country_colors[country], s=100, alpha=0.7)
-        histories[country] = [[x0, y0]]
-    else:
-        scatters[country] = ax.scatter([], [], label=country, color=country_colors[country], s=100, alpha=0.7)
-        histories[country] = []
+plt.xlabel("GDP per Capita (USD)")
+plt.ylabel("Energy per Capita (kWh/person)")
+plt.title("Energy vs GDP (Size: Absolute GDP, Color: Fossil Share)")
 
-    # Initialize line for trailing history
-    lines[country], = ax.plot([], [], color=country_colors[country], linestyle='--', alpha=0.5)
+if (scatter is not None):
+    cbar=plt.colorbar(scatter)
+    cbar.set_label("Fossil Fuel Share (%)")
 
-# Set fixed axis limits to match static chart
-ax.set_xlim(x_min, x_max)       # replace with your static chart axes
-ax.set_ylim(y_min, y_max)      # replace with your static chart axes
-
-ax.set_xlabel("GDP per Capita (USD)")
-ax.set_ylabel("Energy per Capita (MWh/person)")
-ax.grid(True)
-ax.legend()
-
-def update(year):
-    ax.set_title(f"GDP vs Energy per Capita ({year})")
-    for country in selected_countries:
-        country_data = df[(df['country'] == country) & (df['year'] == year)]
-        if not country_data.empty:
-            x = country_data['gdp_per_capita'].values[0]
-            y = country_data['energy_per_capita'].values[0]
-            if not np.isnan(x) and not np.isnan(y):
-                # Update scatter position
-                scatters[country].set_offsets(np.array([[x, y]]))
-                # Update history
-                histories[country].append([x, y])
-                line_data = np.array(histories[country])
-                # Update line positions
-                lines[country].set_data(line_data[:,0], line_data[:,1])
-            else:
-                scatters[country].set_offsets(np.empty((0, 2)))
-        else:
-            scatters[country].set_offsets(np.empty((0, 2)))
-    # Return both scatters and lines
-    return list(scatters.values()) + list(lines.values())
-
-anim = FuncAnimation(fig, update, frames=years, interval=500, blit=False)
-
-# Save GIF using Pillow
-anim.save(f"{figures_dir}/gdp_vs_energy_per_capita_animation.gif", writer='pillow', dpi=200)
+plt.grid(True)
+plt.tight_layout()
+plt.savefig(f"{figuresDir}/multi_feature_bubble_chart.png")
 plt.close()
-print("Saved gdp_vs_energy_per_capita_animation.gif using Pillow")
+print("Saved multi_feature_bubble_chart.png")
 
-print("\nAll visualizations (static + animation) saved in the 'figures/' folder.")
+xMin, xMax=0, 100000
+yMin, yMax=0, 100000
+
+years=sorted(df['year'].unique())
+fig, ax=plt.subplots(figsize=(8, 6))
+
+scatters={}
+lines={}      
+histories={}  
+
+for country in selectedCountries:
+    firstData=df[(df['country']==country) & (~df['gdp_per_capita'].isna()) & (~df['energy_per_capita'].isna())]
+    
+    if (not firstData.empty):
+        x0=firstData['gdp_per_capita'].values[0]
+        y0=firstData['energy_per_capita'].values[0]
+        scatters[country]=ax.scatter([x0], [y0], label=country, color=countryColors[country], s=100, alpha=0.7)
+        histories[country]=[[x0, y0]]
+    else:
+        scatters[country]=ax.scatter([], [], label=country, color=countryColors[country], s=100, alpha=0.7)
+        histories
