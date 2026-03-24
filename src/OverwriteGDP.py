@@ -33,7 +33,7 @@ for entry in data:
 
 wb_df=pd.DataFrame(wb_data)
 
-# --- Update this path to point to Data folder ---
+# --- Updated this path to point to Data folder ---
 owid=pd.read_csv("Data/owid-energy-data.csv")
 
 # Remove non-country entries to match World Bank dataset
@@ -44,5 +44,5 @@ owid = owid[owid["country"].isin(valid_countries)]
 owid = owid.drop(columns=["gdp"])
 merged = pd.merge(owid, wb_df, on=["country", "year"], how="left")
 
-# --- Update this path to save updated CSV in Data folder ---
+# --- Updated this path to save updated CSV in Data folder ---
 merged.to_csv("Data/owid-energy-data-updated.csv", index=False)

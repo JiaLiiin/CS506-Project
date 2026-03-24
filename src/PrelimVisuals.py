@@ -6,7 +6,7 @@ Goal:
 - Save plots as PNG files in the 'figures/' folder.
 
 Input:
-- Data/owid-energy-data-clean-new.csv (cleaned dataset)
+- Data/owid-energy-data-clean.csv (cleaned dataset)
 
 Output:
 - Figures saved to 'figures/' folder
@@ -18,17 +18,31 @@ from matplotlib.animation import FuncAnimation
 import os
 import numpy as np
 
-inputFile="/Users/of/Desktop/CS506-Project/Data/owid-energy-data-clean-new.csv"
-df=pd.read_csv(inputFile)
+df=pd.read_csv("Data/owid-energy-data-clean.csv")
+
+# Compute total renewables share
+df['renewables_share_energy'] = (
+    df['hydro_share_energy'] +
+    df['solar_share_energy'] +
+    df['wind_share_energy'] +
+    df['biofuel_share_energy']
+)
+
+# Compute total fossil share
+df['fossil_share_energy'] = (
+    df['coal_share_energy'] +
+    df['gas_share_energy'] +
+    df['oil_share_energy']
+)
 
 if ('log_gdp_per_capita' in df.columns):
-    df['gdp_per_capita']=np.exp(df['log_gdp_per_capita'])
+    df['gdp_per_capita'] = np.exp(df['log_gdp_per_capita'])
 
 if ('log_population' in df.columns):
-    df['population']=np.exp(df['log_population'])
+    df['population'] = np.exp(df['log_population'])
 
 if ('gdp_per_capita' in df.columns) and ('population' in df.columns):
-    df['gdp']=df['gdp_per_capita']*df['population']
+    df['gdp'] = df['gdp_per_capita'] * df['population']
 
 figuresDir="figures"
 os.makedirs(figuresDir, exist_ok=True)
@@ -129,4 +143,4 @@ for country in selectedCountries:
         histories[country]=[[x0, y0]]
     else:
         scatters[country]=ax.scatter([], [], label=country, color=countryColors[country], s=100, alpha=0.7)
-        histories
+        histories[country] = []
