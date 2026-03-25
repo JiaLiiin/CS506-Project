@@ -123,24 +123,64 @@ plt.savefig(f"{figuresDir}/multi_feature_bubble_chart.png")
 plt.close()
 print("Saved multi_feature_bubble_chart.png")
 
-xMin, xMax=0, 100000
-yMin, yMax=0, 100000
+xMin, xMax = 0, 100000
+yMin, yMax = 0, 100000
 
-years=sorted(df['year'].unique())
-fig, ax=plt.subplots(figsize=(8, 6))
+years = sorted(df['year'].unique())
+fig, ax = plt.subplots(figsize=(8, 6))
 
-scatters={}
-lines={}      
-histories={}  
+scatters = {}
+lines = {}
+histories = {}
 
-for country in selectedCountries:
-    firstData=df[(df['country']==country) & (~df['gdp_per_capita'].isna()) & (~df['energy_per_capita'].isna())]
+for country in selectedCountries:  
+    firstData = df[(df['country'] == country) & (~df['gdp_per_capita'].isna()) & (~df['energy_per_capita'].isna())]
     
-    if (not firstData.empty):
-        x0=firstData['gdp_per_capita'].values[0]
-        y0=firstData['energy_per_capita'].values[0]
-        scatters[country]=ax.scatter([x0], [y0], label=country, color=countryColors[country], s=100, alpha=0.7)
-        histories[country]=[[x0, y0]]
+    if not firstData.empty:
+        x0 = firstData['gdp_per_capita'].values[0]
+        y0 = firstData['energy_per_capita'].values[0]
+        scatters[country] = ax.scatter([x0], [y0], label=country, color=countryColors[country], s=100, alpha=0.7)
+        histories[country] = [[x0, y0]]
     else:
-        scatters[country]=ax.scatter([], [], label=country, color=countryColors[country], s=100, alpha=0.7)
+        scatters[country] = ax.scatter([], [], label=country, color=countryColors[country], s=100, alpha=0.7)
         histories[country] = []
+
+    lines[country], = ax.plot([], [], color=countryColors[country], linestyle='--', alpha=0.5)
+
+ax.set_xlim(xMin, xMax)
+ax.set_ylim(yMin, yMax)
+
+ax.set_xlabel("GDP per Capita (USD)")
+ax.set_ylabel("Energy per Capita (kWh/person)")
+ax.grid(True)
+ax.legend()
+
+def update(year):
+    ax.set_title(f"GDP vs Energy per Capita ({year})")
+    
+    for country in selectedCountries:
+        countryData = df[(df['country'] == country) & (df['year'] == year)]
+        
+        if not countryData.empty:
+            x = countryData['gdp_per_capita'].values[0]
+            y = countryData['energy_per_capita'].values[0]
+            
+            if not np.isnan(x) and not np.isnan(y):
+                scatters[country].set_offsets([[x, y]])
+                histories[country].append([x, y])
+                
+                line_data = np.array(histories[country])
+                lines[country].set_data(line_data[:, 0], line_data[:, 1])
+            else:
+                scatters[country].set_offsets(np.empty((0, 2)))
+        else:
+            scatters[country].set_offsets(np.empty((0, 2)))
+
+    return list(scatters.values()) + list(lines.values())
+
+anim = FuncAnimation(fig, update, frames=years, interval=500, blit=False)
+
+anim.save(f"{figuresDir}/gdp_vs_energy_per_capita_animation.gif", writer='pillow', dpi=200)
+
+plt.close()
+print("Saved gdp_vs_energy_per_capita_animation.gif")
