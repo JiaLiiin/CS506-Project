@@ -15,9 +15,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 import seaborn as sns
 
-# -------------------------------
 # Paths and config
-# -------------------------------
 DATA_PATH = "Data/owid-energy-data-clean.csv"
 OUTPUT_PATH = "results/"
 FIG_PATH = "figures/"
@@ -26,50 +24,50 @@ MODEL_NAME = "linear_regression"
 os.makedirs(OUTPUT_PATH, exist_ok=True)
 os.makedirs(FIG_PATH, exist_ok=True)
 
-# -------------------------------
 # Load data
-# -------------------------------
 df = pd.read_csv(DATA_PATH)
 df = df.sort_values(["country", "year"])
 
-# -------------------------------
 # Time-based train/test split (80/20)
-# -------------------------------
 train = df[df["year"] <= 2012]
 test = df[df["year"] > 2012]
 
-X_train = train.drop(columns=["energy_per_capita", "country"])
-y_train = train["energy_per_capita"]
+feature_cols = [
+    "year", "log_population", "log_gdp_per_capita",
+    "coal_share_energy", "gas_share_energy", "oil_share_energy",
+    "biofuel_share_energy",
+    "hydro_share_energy", "solar_share_energy", "wind_share_energy",
+    "nuclear_share_energy",
+]
 
-X_test = test.drop(columns=["energy_per_capita", "country"])
-y_test = test["energy_per_capita"]
+X_train = train[feature_cols]
+X_test = test[feature_cols]
 
-# -------------------------------
+y_train = np.log1p(train["energy_per_capita"]) 
+y_test  = np.log1p(test["energy_per_capita"])
+
 # Train Linear Regression
-# -------------------------------
 model = LinearRegression()
 model.fit(X_train, y_train)
 
-# -------------------------------
 # Predict
-# -------------------------------
 y_pred = model.predict(X_test)
+y_pred_actual = np.expm1(y_pred)
+y_test_actual = np.expm1(y_test)  
 
 results_df = pd.DataFrame({
     "year": test["year"],
     "country": test["country"],
-    "actual_energy_per_capita": y_test,
-    "predicted_energy_per_capita": y_pred
+    "actual_energy_per_capita": y_test_actual,
+    "predicted_energy_per_capita": y_pred_actual
 })
 
 results_file = os.path.join(OUTPUT_PATH, f"{MODEL_NAME}_predictions.csv")
 results_df.to_csv(results_file, index=False)
 
-# -------------------------------
 # Evaluate
-# -------------------------------
-rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-r2 = r2_score(y_test, y_pred)
+rmse = np.sqrt(mean_squared_error(y_test_actual, y_pred_actual))
+r2 = r2_score(y_test_actual, y_pred_actual)
 
 metrics_df = pd.DataFrame({
     "model": ["Linear Regression"],
@@ -83,9 +81,7 @@ metrics_df.to_csv(metrics_file, index=False)
 print(f"Saved predictions to {results_file}")
 print(metrics_df)
 
-# -------------------------------
 # Actual vs Predicted Plot 
-# -------------------------------
 plt.figure(figsize=(10, 6))
 # Scatter with transparency for overlapping points
 plt.scatter(
@@ -111,9 +107,7 @@ plt.tight_layout()
 plt.savefig(os.path.join(FIG_PATH, f"{MODEL_NAME}_actual_vs_pred.png"))
 plt.close()
 
-# -------------------------------
 # Residual Plot
-# -------------------------------
 residuals = results_df["actual_energy_per_capita"] - results_df["predicted_energy_per_capita"]
 results_df["residuals"] = residuals
 

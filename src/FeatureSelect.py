@@ -2,98 +2,58 @@
 Feature selection and basic preprocessing
 
 Goal:
-- Select features relevant for predicting energy_per_capita.
+- Select relevant features for predicting energy_per_capita.
+- Filter dataset by year and countries with sufficient data.
 - Drop rows with missing target.
-- Filter years with high missingness.
-- Drop countries with too many missing values.
-- Drop aggregate rows like 'World' and 'North America'.
-- Add derived features like gdp_per_capita.
 """
 
 import pandas as pd
+import numpy as np
 
-# -------------------------------
-# 1. Load dataset
-# -------------------------------
+# Load dataset
 df = pd.read_csv("Data/owid-energy-data-updated.csv")
 
-# -------------------------------
-# 2. Feature selection
-# -------------------------------
+# Feature selection
 selected_columns = [
-    # identifiers
-    "country",
-    "year",
-
-    # economic
-    "population",
-    "gdp",
-
-    # target
-    "energy_per_capita",
-
-    # fossil fuels
-    "coal_cons_per_capita",
-    "gas_energy_per_capita",
-    "oil_energy_per_capita",
-    "fossil_energy_per_capita",
-    "fossil_share_energy",
-
-    # renewables / low carbon
-    "renewables_energy_per_capita",
-    "low_carbon_energy_per_capita",
-    "renewables_share_energy",
-    "low_carbon_share_energy",
-    "hydro_share_energy",
-    "solar_share_energy",
-    "wind_share_energy"
+    "country", "year", "iso_code", "population", "gdp",
+    "coal_share_energy", "gas_share_energy", "oil_share_energy",
+    "biofuel_share_energy",
+    "hydro_share_energy", "solar_share_energy", "wind_share_energy",
+    "nuclear_share_energy",
+    "energy_per_capita"  # target
 ]
 
 df_selected = df[selected_columns].copy()
 
-# -------------------------------
-# 3. Drop rows with missing target
-# -------------------------------
-df_selected = df_selected.dropna(subset=["energy_per_capita"])
+df_selected['gdp_per_capita'] = df_selected['gdp'] / df_selected['population']
+df_selected.drop(columns=['gdp'], inplace=True)
 
-# -------------------------------
-# 4. Add derived features
-# -------------------------------
-df_selected["gdp_per_capita"] = df_selected["gdp"] / df_selected["population"]
-df_selected["fossil_to_renewables_ratio"] = df_selected["fossil_energy_per_capita"] / (df_selected["renewables_energy_per_capita"] + 1e-6)  # add
+# These columns aren't linearly distributed, so we apply log transformation to make them linear
+skewed_cols = ["gdp_per_capita", "population"]
+for col in skewed_cols:
+    df_selected[f"log_{col}"] = np.log1p(df_selected[col])
+    df_selected.drop(columns=[col], inplace=True)
 
-# -------------------------------
-# 5. Filter by year (data coverage improves from 1965)
-# -------------------------------
+#  Filter by Year and Country
 df_selected = df_selected[df_selected["year"] >= 1965]
 
-# -------------------------------
-# 6. Drop countries with too many missing values
-# -------------------------------
-threshold = 0.4  # 40% missing allowed
+# Drop aggregates. Non-aggregate entries have 3-letter ISO codes
+df_selected = df_selected[df_selected['iso_code'].str.len() == 3]
 
-country_missing = df_selected.isna().groupby(df_selected["country"]).mean().mean(axis=1)
+# Drop countries with >40% missing
+threshold = 0.4
+country_missing = df_selected.groupby("country").apply(lambda x: x.isna().mean().mean())
 good_countries = country_missing[country_missing <= threshold].index
 df_selected = df_selected[df_selected["country"].isin(good_countries)]
 
-# -------------------------------
-# 7. Drop aggregate regions
-# -------------------------------
-df_selected = df_selected.drop(
-    df_selected[df_selected['country'].isin(['World', 'North America'])].index
-)
+# Drop rows with missing target
+df_selected = df_selected.dropna(subset=['energy_per_capita']).copy()
 
-# -------------------------------
-# 8. Optional: reset index
-# -------------------------------
-df_selected = df_selected.reset_index(drop=True)
-
-# -------------------------------
-# 9. Save cleaned dataset
-# -------------------------------
+# Save cleaned dataset
 output_file = "Data/owid-energy-data-selected.csv"
 df_selected.to_csv(output_file, index=False)
 
 print(f"Cleaned dataset saved: {output_file}")
 print(f"Shape after filtering: {df_selected.shape}")
 print(f"Remaining countries: {df_selected['country'].nunique()}")
+print(f"Missing values: {df_selected.isna().mean().sort_values(ascending=False)}")
