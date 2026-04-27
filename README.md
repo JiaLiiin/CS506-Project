@@ -229,6 +229,8 @@ Evaluated on **original scale** after reversing log transform.
 
 ## 9. Results 
 
+<a href="figures/model_comparison_bar_interactive.html">View interactive results visualization</a>
+
 | Model | RMSE | R² |
 |------|------|------|
 | Linear Regression | 28,540 | 0.550 |
@@ -248,7 +250,7 @@ Linear models underperform due to inability to capture nonlinear relationships. 
 
 ### Residual Analysis 
 
-(INSERT HTML HERE !!!)
+<a href="figures/residuals_interactive.html">View interactive residual visualization</a>
 
 Residuals are centered near zero for most predictions but increase at high consumption levels. This indicates:
 
@@ -272,16 +274,19 @@ ModelComparisonVisual.py
 ```
 
 This generates:
-- interactive actual vs predicted plots
-- residual plots for all models
-- RMSE and R² comparison bar charts
-- combined metrics table
+- interactive actual vs predicted plots (<a href="figures/model_comparison_interactive.html">View them here</a>)
+- residual plots for all models (<a href="figures/residuals_interactive.html">View them here</a>)
+- RMSE and R² comparison bar charts (<a href="figures/model_comparison_bar_interactive.html">View them here</a>)
+- combined metrics table (Located in `/results/model_comparison.csv`)
 
 ---
 
-## 11. Clustering Analysis (K-Means + PCA)
+## 12. Clustering Analysis (K-Means + PCA)
 
-We applied K-Means clustering and PCA to identify country-level energy regimes.
+### Method
+
+- PCA for dimensionality reduction  
+- K-Means clustering 
 
 ### Features Used
 - energy per capita  
@@ -291,6 +296,7 @@ We applied K-Means clustering and PCA to identify country-level energy regimes.
 - renewable share 
 
 ### Results
+![](figures/elbow_silhouette_plot.png)
 
 - Optimal clusters: 4  
 - Silhouette Score: ~0.305 
@@ -301,28 +307,24 @@ We applied K-Means clustering and PCA to identify country-level energy regimes.
 3. Renewable leaders  
 4. Fossil-fuel-heavy economies (petrostates)
 
-INSERT K MEANS CLUSTERS HERE !!!!
+<a href="figures/kmeans_clusters_interactive.html">View clusters here</a>
 
-### Interpretation
+### PCA Interpretation 
+![](figures/pca_variance_explained.png)
+
+- PC1 → GDP + renewables  
+- PC2 → fossil intensity  
+- PC3 → population
+
+
+### Key Insights
+
+- Energy consumption is **strongly nonlinear**
+- GDP alone is insufficient  
+- Energy structure matters significantly  
+- Countries fall into distinct regimes
+  
 Countries cluster along axes defined by GDP and energy structure. This supports the hypothesis that energy consumption is shaped by both economic development and energy composition.
-
----
-
-## 12. Visualizations
-
-Visualizations are stored in `/figures`.
-
-### Interactive (Plotly)
-
-- Model comparison (actual vs predicted)  
-- Residual analysis  
-- PCA clustering visualization  
-
-### Static
-
-- PCA variance explained  
-- Elbow method plot  
-- Silhouette plot  
 
 ---
 
