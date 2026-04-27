@@ -15,48 +15,19 @@ make install
 make run-all
 ```
 
-### What This Does
-
 The `Makefile` executes the full pipeline:
 
+- Data collection (OWID + World Bank API)
 - Data cleaning and preprocessing  
 - Feature engineering  
 - Exploratory data analysis (EDA)  
-- Model training:
-  - Linear Regression  
-  - Ridge Regression  
-  - Random Forest  
-  - XGBoost  
-  - SVR (SVD + SVR pipeline)  
-  - Stacking Ensemble  
+- Model training and evaluation 
 - Model comparison visualizations  
-- K-Means clustering analysis  
+- PCA + K-Means clustering   
 
 ---
 
-## 2. Installation Requirements
-
-Optional manual install:
-
-```bash
-pip install -r requirements.txt
-```
-
-### Main Dependencies
-
-- pandas
-- requests
-- matplotlib
-- numpy
-- Pillow
-- scikit-learn
-- seaborn
-- xgboost
-- plotly 
-
----
-
-## 3. Tests + GitHub Workflow
+## 2. Tests + GitHub Workflow
 
 ### Tests
 
@@ -68,48 +39,116 @@ Run locally:
 pytest
 ```
 
-### Tests Include
+### What is Tested 
 
-- Data loading validation  
-- Required column checks  
-- Prediction file existence checks  
-- Prediction sanity checks:
+- Data loads correctly  
+- Required columns exist   
+- Predictions are valid:
   - no NaNs  
   - non-negative values  
 
 ### GitHub Actions (CI)
 
-Workflow file:
+Located in:
 
+```
 .github/workflows/tests.yml
+```
 
 Automatically:
 
 - installs dependencies  
-- runs tests on every push / pull request  
+- runs tests on every push  
 
-### Purpose
-
-- Ensures code runs correctly  
-- Validates model outputs  
-- Prevents broken commits  
+Ensures reproducibility and prevents broken code.
 
 ---
 
-## 4. Project Overview
+## 3. Project Overview
 
-This project analyzes global energy consumption patterns and their relationship with economic indicators at the country level, aiming to study how energy consumption varies across countries and over time.
+This project examines global energy consumption patterns and their relationship with economic indicators at the country level, with a focus on how energy use varies across countries and over time.
 
-The primary goal of this project is to predict energy consumption per capita using economic and energy-related features such as GDP, population, and energy mix composition. Additionally, we aim to analyze the relationship between GDP per capita and energy consumption per capita using GDP, population density, and fossil fuel share as features and examine trends in fossil fuel and renewable energy usage across countries over time using statistical analysis and visualizations.
+This project aims to:
+
+1. **Predict energy consumption per capita** for countries over time  
+2. **Understand how energy use evolves across development stages**  
+
+To achieve these goals, we leverage economic and energy-related features such as GDP, population, population density, and energy mix composition. The analysis also explores the relationship between GDP per capita and energy consumption per capita, and investigates trends in fossil fuel and renewable energy usage across countries through statistical analysis and visualizations.
 
 ---
 
-## 5. Dataset
+## 4. Data Collection
+
+### Data Sources
 
 This project combines:
 
 - OWID Energy Dataset (Our World in Data)  
-- World Bank GDP Data  
+- World Bank GDP Data
+
+### Why These Sources? 
+
+- OWID → comprehensive energy metrics  
+- World Bank → reliable GDP data  
+
+### Data Collection Method
+
+The OWID dataset provides country-year energy metrics. However, GDP values were replaced using World Bank data to ensure consistency and completeness.
+
+Steps:
+  1. Load OWID dataset  
+  2. Remove existing GDP column  
+  3. Fetch GDP via API  
+  4. Merge on (country, year) 
+
+---
+
+## 5. Data Cleaning
+
+### Country Filtering
+
+- Removed countries with >40% missing values  
+- Removed aggregate regions (e.g., World)
+
+### Missing Values
+- Target (`energy_per_capita`): dropped (~15 rows) 
+- GDP: linear interpolation within country, then forward/back fill for edges  
+- Energy shares: forward/backward fill
+
+### Rationale
+
+These choices preserve temporal consistency and avoid introducing bias from cross-country imputation.
+
+---
+
+## 6. Feature Engineering
+
+### Selected Features 
+- log_gdp_per_capita
+- log_population
+- log_gdp_per_capita  
+- log_population  
+- coal_share_energy  
+- gas_share_energy  
+- oil_share_energy  
+- nuclear_share_energy  
+- hydro_share_energy  
+- solar_share_energy  
+- wind_share_energy  
+- biofuel_share_energy
+
+These features were selected because they capture the primary drivers of per capita energy consumption. GDP per capita reflects economic activity, infrastructure development, and overall wealth, all of which strongly influence energy use. Population captures the scale and distribution of demand, with log transformations helping account for skewness and non-linear growth patterns. Energy mix shares (expressed as percentages of total consumption) provide insight into how energy is produced and consumed, allowing the model to capture differences in efficiency, technology, and resource dependence across countries.
+ 
+### Dropped Features
+
+- Aggregate shares (redundant)  
+- Emissions (>50% missing)
+
+Aggregate features such as total renewable and fossil energy shares were removed because they are redundant with their component variables. Additionally, greenhouse gas emissions were excluded due to high missingness, making reliable imputation impractical.
+
+### Transformations
+- Log transform applied to GDP and population to reduce skew
+- Target transformed with log1p, predictions converted back using expm1
 
 ### Final Dataset
 
@@ -119,30 +158,29 @@ This project combines:
 
 ---
 
-## 6. Data Processing
+## 7. Exploratory Data Analysis (EDA)
 
-### Data Cleaning
-- Merged OWID dataset with World Bank GDP data
-- Removed aggregated regions
-- Filtered countries with excessive missing data
+### 1. Energy Per Capita Over Time
+![](figures/energy_per_capita_timeseries.png)
 
-### Missing Values
-- GDP: interpolated within country
-- Energy shares: forward/backward fill
-- Dropped rows missing target (~15 rows)
-
-### Feature Engineering
-- log_gdp_per_capita
-- log_population
-- energy mix shares (coal, gas, oil, nuclear, hydro, wind, solar, biofuel)
-
-### Target Transformation
-- energy_per_capita transformed using log1p
-- predictions converted back using expm1
+Energy consumption varies widely across countries. The United States maintains the highest levels, while China exhibits rapid growth, especially between 2000 and 2010. India and Brazil show gradual increases, while developed countries plateau.
 
 ---
 
-## 7. Exploratory Data Analysis (EDA)
+### 2. Energy Mix Transitions
+![](figures/renewables_vs_fossil_share.png)
+
+All countries begin heavily fossil-dependent. Germany shows the largest renewable transition, Brazil reaches near parity, while India shows minimal structural change.
+
+--- 
+
+### 3. GDP vs Energy Consumption (Scatter + Animation)
+![](figures/gdp_vs_energy_per_capita_animation.gif)
+![](figures/gdp_vs_energy_per_capita.png)
+
+A strong positive relationship exists at low income levels, weakening at higher levels. This confirms a **nonlinear relationship between GDP and energy consumption**.
+
+--- 
 
 ### Key Insights
 
@@ -163,9 +201,14 @@ This indicates a strong **nonlinear relationship** between economic development 
 
 ---
 
-## 8. Modeling Methods
+## 8. Modeling Approach
 
-We use supervised learning to predict energy consumption per capita.
+### Train/Test Split
+
+- Train: 1965–2012  
+- Test: 2013–2024  
+
+This prevents leakage and simulates forecasting.
 
 ### Models Tested
 - Linear Regression
@@ -175,40 +218,16 @@ We use supervised learning to predict energy consumption per capita.
 - SVD + SVR
 - Stacking Ensemble (RF + XGBoost)
 
-### Features Used
-- `log_gdp_per_capita`  
-- `log_population`  
-- Energy mix shares:
-  - coal  
-  - gas  
-  - oil  
-  - nuclear  
-  - hydro  
-  - wind  
-  - solar  
-  - biofuel 
+### Evaluation
 
-These features were selected because they capture the primary drivers of per capita energy consumption. GDP per capita reflects economic activity, infrastructure development, and overall wealth, all of which strongly influence energy use. Population captures the scale and distribution of demand, with log transformations helping account for skewness and non-linear growth patterns. Energy mix shares (expressed as percentages of total consumption) provide insight into how energy is produced and consumed, allowing the model to capture differences in efficiency, technology, and resource dependence across countries.
+- RMSE  
+- R²  
 
-Aggregate features such as total renewable and fossil energy shares were removed because they are redundant with their component variables. Additionally, greenhouse gas emissions were excluded due to high missingness, making reliable imputation impractical.
+Evaluated on **original scale** after reversing log transform.
 
 ---
 
-## 9. Model Comparison System 
-
-We built a centralized evaluation script:
-
-ModelComparisonVisual.py
-
-This generates:
-- interactive actual vs predicted plots
-- residual plots for all models
-- RMSE and R² comparison bar charts
-- combined metrics table
-
----
-
-## 10. Model Results
+## 9. Results 
 
 | Model | RMSE | R² |
 |------|------|------|
@@ -219,12 +238,44 @@ This generates:
 | Stacking | 17,524 | 0.829 |
 | SVR (SVD + SVR) | 26,753 | 0.601 |
 
-### Key Findings
+--- 
 
-- Tree-based models significantly outperform linear models  
-- Stacking provides minimal improvement  
-- Errors increase for high-energy-consuming countries 
-- Overall, XGBoost achieves the best performance, confirming that nonlinear, tree-based methods are well-suited for modeling global energy consumption patterns. 
+## 10. Interpretation 
+
+### Model Behavior 
+
+Linear models underperform due to inability to capture nonlinear relationships. Random Forest significantly improves performance by modeling interactions. XGBoost further improves results by iteratively reducing residual errors, which stacking provides minimal improvement because the models learn similar patterns. 
+
+### Residual Analysis 
+
+(INSERT HTML HERE !!!)
+
+Residuals are centered near zero for most predictions but increase at high consumption levels. This indicates:
+
+- Increasing variance at high values  
+- Difficulty modeling extreme countries  
+
+### Limitations 
+
+- No country-specific features (no fixed effects)  
+- Missing structural variables (climate, policy)  
+- Extreme outliers (e.g., petrostates)  
+
+---
+
+## 11. Model Comparison Visualizations 
+
+We built a centralized evaluation script:
+
+```
+ModelComparisonVisual.py
+```
+
+This generates:
+- interactive actual vs predicted plots
+- residual plots for all models
+- RMSE and R² comparison bar charts
+- combined metrics table
 
 ---
 
@@ -242,15 +293,18 @@ We applied K-Means clustering and PCA to identify country-level energy regimes.
 ### Results
 
 - Optimal clusters: 4  
-- Silhouette Score: ~0.30 
+- Silhouette Score: ~0.305 
 
-### Clusters Identified
-- Industrialized economies  
-- Developing economies  
-- Renewable leaders  
-- Fossil-fuel-heavy economies (petrostates)  
+#### Clusters Identified
+1. Industrialized economies  
+2. Developing economies  
+3. Renewable leaders  
+4. Fossil-fuel-heavy economies (petrostates)
 
-PCA revealed that GDP and energy structure explain most variance in global energy systems.
+INSERT K MEANS CLUSTERS HERE !!!!
+
+### Interpretation
+Countries cluster along axes defined by GDP and energy structure. This supports the hypothesis that energy consumption is shaped by both economic development and energy composition.
 
 ---
 
