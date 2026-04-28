@@ -106,9 +106,8 @@ Steps:
 ## 5. Data Cleaning
 
 ### Country Filtering
-
 - Removed countries with >40% missing values  
-- Removed aggregate regions (e.g., World)
+- Removed aggregate regions by `iso_code` (e.g., World)
 
 ### Missing Values
 - Target (`energy_per_capita`): dropped (~15 rows) 
@@ -123,9 +122,8 @@ These choices preserve temporal consistency and avoid introducing bias from cros
 
 ## 6. Feature Engineering
 
-### Selected Features 
-- log_gdp_per_capita
-- log_population
+### Selected Features
+- year
 - log_gdp_per_capita  
 - log_population  
 - coal_share_energy  
@@ -141,8 +139,10 @@ These features were selected because they capture the primary drivers of per cap
  
 ### Dropped Features
 
+Dropped high-missing and redundant features: 
+
 - Aggregate shares (redundant)  
-- Emissions (>50% missing)
+- Green house gas emissions (>50% missing)
 
 Aggregate features such as total renewable and fossil energy shares were removed because they are redundant with their component variables. Additionally, greenhouse gas emissions were excluded due to high missingness, making reliable imputation impractical.
 
@@ -259,9 +259,15 @@ Residuals are centered near zero for most predictions but increase at high consu
 
 ### Limitations 
 
-- No country-specific features (no fixed effects)  
-- Missing structural variables (climate, policy)  
-- Extreme outliers (e.g., petrostates)  
+Several factors limit model performance, particularly for extreme cases:
+
+High-consumption outliers (e.g., Gulf states, Iceland) have energy profiles driven by structural factors not captured in the feature set, such as petroleum-based economies, extreme climate conditions, and industrial subsidies. As a result, these observations are systematically harder to predict.
+
+The model does not include country identifiers, and therefore cannot learn country-specific fixed effects. Countries with similar GDP and energy mix can exhibit very different energy consumption due to persistent differences in policy, infrastructure, geography, and culture.
+
+Although the model is trained on a log-transformed target to reduce skewness, evaluation on the original scale causes large absolute errors at high values to dominate RMSE. This contributes to the increasing error variance observed in residual plots.
+
+Overall, these limitations highlight that missing structural variables and unmodeled country-level heterogeneity are key drivers of prediction error, especially at the upper end of the distribution.
 
 ---
 
