@@ -314,6 +314,7 @@ This generates:
 4. Fossil-fuel-heavy economies (petrostates)
 
 <a href="figures/kmeans_clusters_interactive.html">View clusters here</a>
+Run: open figures/kmeans_clusters_interactive.html
 
 ### PCA Interpretation 
 ![](figures/pca_variance_explained.png)

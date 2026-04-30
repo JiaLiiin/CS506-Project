@@ -222,7 +222,7 @@ plt.tight_layout()
 plt.savefig(os.path.join(FIG_PATH, "elbow_silhouette_plot.png"), dpi=150)
 plt.close()
 
-
+# To View Interactively, run:  open figures/kmeans_clusters_interactive.html
 
 # Interactive Visualization - PCA Scatter 
 plot_df = snapshot[["country", "cluster"] + cluster_features].copy()
