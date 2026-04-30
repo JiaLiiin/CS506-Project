@@ -1,6 +1,6 @@
 # CS506 Project — Global Energy Consumption Modeling
 
-**Final Video Presentation:** https://youtube.com/YOUR-LINK-HERE
+**Final Video Presentation:** https://youtu.be/BJZWWlMpbNk
 
 ---
 
